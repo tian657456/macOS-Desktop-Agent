@@ -1,0 +1,56 @@
+# 文件整理规则：关键词优先，其次扩展名
+allowed_roots:
+  - "~/Desktop"
+  - "~/Documents"
+  - "~/Downloads"
+
+# 关键词命中：文件名包含任一关键词 -> 移动到指定目录（支持 ~）
+keyword_rules:
+  - keywords: ["作业", "assignment", "homework"]
+    dst_dir: "~/Documents/学校资料/作业"
+  - keywords: ["报告", "report"]
+    dst_dir: "~/Documents/学校资料/报告"
+  - keywords: ["简历", "resume", "cv"]
+    dst_dir: "~/Documents/个人/简历"
+  - keywords: ["发票", "invoice"]
+    dst_dir: "~/Documents/财务/发票"
+  - keywords: ["合同", "contract"]
+    dst_dir: "~/Documents/财务/合同"
+  - keywords: ["机器学习", "ml", "machine learning"]
+    dst_dir: "~/Documents/学校资料/机器学习"
+
+# 扩展名分类（关键词未命中时使用）
+extension_rules:
+  pdf: "~/Documents/资料/PDF"
+  doc: "~/Documents/资料/Word"
+  docx: "~/Documents/资料/Word"
+  ppt: "~/Documents/资料/PPT"
+  pptx: "~/Documents/资料/PPT"
+  xls: "~/Documents/资料/Excel"
+  xlsx: "~/Documents/资料/Excel"
+  csv: "~/Documents/资料/数据"
+  txt: "~/Documents/资料/文本"
+  md: "~/Documents/资料/文本"
+  zip: "~/Documents/资料/压缩包"
+  rar: "~/Documents/资料/压缩包"
+  7z: "~/Documents/资料/压缩包"
+  png: "~/Documents/资料/图片"
+  jpg: "~/Documents/资料/图片"
+  jpeg: "~/Documents/资料/图片"
+  gif: "~/Documents/资料/图片"
+  heic: "~/Documents/资料/图片"
+  mp4: "~/Documents/资料/视频"
+  mov: "~/Documents/资料/视频"
+  py: "~/Documents/资料/代码"
+  ipynb: "~/Documents/资料/代码"
+  js: "~/Documents/资料/代码"
+  ts: "~/Documents/资料/代码"
+
+# 批量整理时：是否跳过隐藏文件（以 . 开头）
+skip_hidden: true
+
+# 批量整理时：是否跳过文件夹
+skip_directories: true
+
+# 批量整理动作数超过该阈值时，标记为“高风险”
+batch_risk_threshold: 20

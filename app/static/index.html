@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>macOS Desktop Agent</title>
+  <style>
+    :root{
+      --bg1:#eef7ff;
+      --bg2:#dfefff;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --primary:#3b82f6;
+      --primary-weak:#bfdbfe;
+      --ok:#0f766e;
+      --err:#b91c1c;
+      --border:#e2e8f0;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(160deg,var(--bg1),var(--bg2));
+      color:var(--text);
+    }
+    .app{
+      max-width:980px;
+      margin:0 auto;
+      padding:28px 22px 40px;
+    }
+    .header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .title{
+      font-size:22px;
+      font-weight:700;
+    }
+    .subtitle{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:4px;
+    }
+    .status{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .status-dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:var(--primary);
+      box-shadow:0 0 0 6px rgba(59,130,246,.15);
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .chat{
+      min-height:320px;
+      max-height:520px;
+      overflow:auto;
+      padding:8px 4px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .bubble{
+      max-width:78%;
+      padding:10px 12px;
+      border-radius:14px;
+      line-height:1.5;
+      font-size:14px;
+      white-space:pre-wrap;
+    }
+    .bubble.user{
+      align-self:flex-end;
+      background:#dbeafe;
+      border:1px solid #bfdbfe;
+    }
+    .bubble.bot{
+      align-self:flex-start;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+    }
+    .input-wrap{
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+    }
+    textarea{
+      flex:1;
+      min-height:64px;
+      max-height:160px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      outline:none;
+      resize:vertical;
+      font-size:14px;
+      background:#fff;
+    }
+    textarea:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(59,130,246,.15);
+    }
+    .btn{
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .btn.primary{
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+    .btn.ghost{
+      background:#fff;
+      color:var(--muted);
+    }
+    .hint{
+      margin-top:8px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .result{
+      margin-top:12px;
+      font-size:12px;
+      white-space:pre-wrap;
+    }
+    .ok{ color:var(--ok); }
+    .err{ color:var(--err); }
+    table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+    th, td{ border:1px solid var(--border); padding:6px 8px; vertical-align:top; }
+    th{ background:#f1f5f9; text-align:left; }
+    .pill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); font-size:11px; color:var(--muted); }
+    .section-title{ font-size:13px; color:var(--muted); margin-top:14px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="title">macOS Desktop Agent</div>
+        <div class="subtitle">浅蓝渐变 · 简约风 · 类 AI 对话体验</div>
+      </div>
+      <div class="status" style="gap:12px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#0f172a;">助手名称</span>
+          <input id="assistantNameInput" type="text" placeholder="小T" style="height:28px; padding:4px 8px; border:1px solid var(--border); border-radius:8px; outline:none;"/>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="status-dot" id="micDot"></span>
+          <span id="micStatus">按 B 开始语音输入</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="chat" class="chat"></div>
+      <div class="input-wrap">
+        <textarea id="cmd" placeholder="输入指令或按 B 语音输入，例如：打开音乐并自动播放"></textarea>
+        <button class="btn primary" onclick="sendText()">发送</button>
+      </div>
+      <div class="hint">回车发送 · B 开始语音输入 · 自动执行</div>
+      <div id="msg" class="result"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="section-title">动作列表（调试用）</div>
+      <div id="tableWrap"></div>
+    </div>
+  </div>
+
+<script>
+let actions = [];
+let recognition = null;
+let listening = false;
+let chatHistory = [];
+let assistantName = "小T";
+
+function setMsg(text, ok=false){
+  const el = document.getElementById("msg");
+  el.className = ok ? "ok" : "err";
+  el.textContent = text;
+}
+
+function addBubble(text, role){
+  const chat = document.getElementById("chat");
+  const bubble = document.createElement("div");
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text;
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function renderTable(previewData=null){
+  const wrap = document.getElementById("tableWrap");
+  if(!actions.length){
+    wrap.innerHTML = '<p class="muted">暂无动作。先点击“生成计划”。</p>';
+    return;
+  }
+  let rows = actions.map((a, idx) => {
+    const risk = (previewData && previewData.actions && previewData.actions[idx] && previewData.actions[idx].risk) || a.risk || "low";
+    const reason = (previewData && previewData.actions && previewData.actions[idx] && previewData.actions[idx].reason) || a.reason || "";
+    const computed = (previewData && previewData.actions && previewData.actions[idx] && (previewData.actions[idx].computed_dst || previewData.actions[idx].computed_path)) || "";
+    return `<tr>
+      <td>${idx+1}</td>
+      <td><span class="pill risk-${risk}">${risk}</span></td>
+      <td><code>${escapeHtml(JSON.stringify(a))}</code></td>
+      <td>${escapeHtml(computed || "")}</td>
+      <td>${escapeHtml(reason || "")}</td>
+    </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `<table>
+    <thead>
+      <tr><th>#</th><th>风险</th><th>动作</th><th>计算目标</th><th>原因</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function escapeHtml(s){
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+async function callAssistant(text){
+  const resp = await fetch("/api/assistant", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({text, history: chatHistory, assistant_name: assistantName})
+  });
+  const data = await resp.json();
+  if(!resp.ok || data.ok === false){
+    setMsg(data.error || JSON.stringify(data), false);
+    return null;
+  }
+  return data;
+}
+
+async function handleCommand(text){
+  if(!text || !text.trim()){
+    return;
+  }
+  const clean = text.trim();
+  document.getElementById("cmd").value = clean;
+  addBubble(clean, "user");
+  chatHistory.push({role:"user", content: clean});
+  if(chatHistory.length > 12){
+    chatHistory = chatHistory.slice(-12);
+  }
+  const data = await callAssistant(clean);
+  if(!data){
+    addBubble("请求失败，请稍后重试。", "bot");
+    return;
+  }
+  actions = data.actions || [];
+  renderTable(data.preview || null);
+  const reply = data.reply || "我在。";
+  addBubble(reply, "bot");
+  chatHistory.push({role:"assistant", content: reply});
+  if(chatHistory.length > 12){
+    chatHistory = chatHistory.slice(-12);
+  }
+  if(data.executed){
+    setMsg("已执行完成。", true);
+  }else if(data.preview && data.preview.requires_confirm){
+    setMsg("存在高风险操作，已停止自动执行。", false);
+  }else{
+    setMsg("已完成对话回复。", true);
+  }
+  speak(reply);
+}
+
+function sendText(){
+  const text = document.getElementById("cmd").value;
+  handleCommand(text);
+  document.getElementById("cmd").value = "";
+}
+
+async function speak(text){
+  try{
+    const resp = await fetch("/api/tts", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({text})
+    });
+    const data = await resp.json();
+    if(resp.ok && data.ok){
+      const audio = new Audio(`data:audio/${data.format};base64,${data.audio_base64}`);
+      try{
+        await audio.play();
+        return;
+      }catch(e){}
+    }
+  }catch(e){}
+  if(!window.speechSynthesis){
+    return;
+  }
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "zh-CN";
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
+function initSpeech(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    document.getElementById("micStatus").textContent = "当前浏览器不支持语音输入";
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = "zh-CN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    listening = true;
+    document.getElementById("micStatus").textContent = "正在聆听...";
+    document.getElementById("micDot").style.background = "#22c55e";
+  };
+  recognition.onend = () => {
+    listening = false;
+    document.getElementById("micStatus").textContent = "按 B 开始语音输入";
+    document.getElementById("micDot").style.background = "#3b82f6";
+  };
+  recognition.onerror = () => {
+    listening = false;
+    document.getElementById("micStatus").textContent = "语音输入失败，按 B 重试";
+    document.getElementById("micDot").style.background = "#ef4444";
+  };
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    handleCommand(transcript);
+  };
+}
+
+document.addEventListener("keydown", (e) => {
+  if(e.key.toLowerCase() === "b" && recognition){
+    if(listening){
+      recognition.stop();
+    }else{
+      recognition.start();
+    }
+  }
+  if(e.key === "Enter" && !e.shiftKey){
+    const active = document.activeElement;
+    if(active && active.id === "cmd"){
+      e.preventDefault();
+      sendText();
+    }
+  }
+});
+
+function initAssistantName(){
+  const saved = localStorage.getItem("assistantName");
+  if(saved){ assistantName = saved; }
+  const input = document.getElementById("assistantNameInput");
+  input.value = assistantName;
+  input.addEventListener("input", () => {
+    assistantName = input.value.trim() || "小T";
+    localStorage.setItem("assistantName", assistantName);
+  });
+}
+
+initSpeech();
+initAssistantName();
+</script>
+</body>
+</html>
